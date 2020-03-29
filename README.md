@@ -1,12 +1,8 @@
-# Leaflet Storymaps with Google Sheets
-Customize your Leaflet story map with linked Google Sheets template and scrolling narrative.
-Supports images, audio and video embeddings, and Leaflet TileLayer/geojson overlays.
+# otl-redrawing-lines-hartford
+scrolling Leaflet storymap for [On The Line book](http://ontheline.trincoll.edu)
 
-![Demo Screenshot](media/screenshot.jpg)
-
-## [Live Demo](http://datavizforall.github.io/leaflet-storymaps-with-google-sheets/index.html)
-- The map is hosted by GitHub and can be found at http://datavizforall.github.io/leaflet-storymaps-with-google-sheets/index.html
-- Google Sheets template https://docs.google.com/spreadsheets/d/1AO6XHL_0JafWZF4KEejkdDNqfuZWUk3SlNlQ6MjlRFM/
+## [Live Demo](https://ontheline.github.io/otl-redrawing-lines-hartford/)
+- with [Google Sheets data](https://docs.google.com/spreadsheets/d/1Wz7G0nIwLz34FGj2AEKqbvqijMFWmm0D8oXcyJltp9o/edit#gid=0)
 
 ## Create Your Own
 - See step-by-step tutorial in *Data Visualization for All* https://datavizforall.org/leaflet-storymaps-with-google-sheets.html
