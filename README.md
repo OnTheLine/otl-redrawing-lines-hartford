@@ -1,7 +1,7 @@
 # otl-redrawing-lines-hartford
 scrolling Leaflet storymap for [On The Line book](http://ontheline.trincoll.edu)
 
-## [Live Demo](https://ontheline.github.io/otl-redrawing-lines-hartford/)
+- [Live Demo](https://ontheline.github.io/otl-redrawing-lines-hartford/)
 - with [Google Sheets data](https://docs.google.com/spreadsheets/d/1Wz7G0nIwLz34FGj2AEKqbvqijMFWmm0D8oXcyJltp9o/edit#gid=0)
 
 ## Create Your Own
