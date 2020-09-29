@@ -10,29 +10,48 @@ $(window).on('load', function() {
     scrollPosition = $(this).scrollTop();
   });
 
-  // First, try reading data from the Google Sheet
-  if (typeof googleDocURL !== 'undefined' && googleDocURL) {
-    Tabletop.init({
-      key: googleDocURL,
-      callback: function(data, tt) {
-        initMap(
-          data.Options.elements,
-          data.Chapters.elements
-        )
+  // First, try reading Options.csv
+  $.get('csv/Options.csv', function(options) {
+
+    $.get('csv/Chapters.csv', function(chapters) {
+      initMap(
+        $.csv.toObjects(options),
+        $.csv.toObjects(chapters)
+      )
+    }).fail(function(e) { alert('Found Options.csv, but could not read Chapters.csv') });
+
+  // If not available, try from the Google Sheet
+  }).fail(function(e) {
+
+    var parse = function(res) {
+      return Papa.parse(Papa.unparse(res[0].values), {header: true} ).data;
+    }
+  
+    // First, try reading data from the Google Sheet
+    if (typeof googleDocURL !== 'undefined' && googleDocURL) {
+  
+      if (typeof googleApiKey !== 'undefined' && googleApiKey) {
+  
+        var apiUrl = 'https://sheets.googleapis.com/v4/spreadsheets/'
+        var spreadsheetId = googleDocURL.split('/d/')[1].split('/')[0];
+  
+        $.when(
+          $.getJSON(apiUrl + spreadsheetId + '/values/Options?key=' + googleApiKey),
+          $.getJSON(apiUrl + spreadsheetId + '/values/Chapters?key=' + googleApiKey),
+        ).then(function(options, chapters) {
+          initMap(parse(options), parse(chapters))
+        })
+  
+      } else {
+        alert('You load data from a Google Sheet, you need to add a free Google API key')
       }
-    })
-  }
-  // Else, try csv/Options.csv and csv/Chapters.csv
-  else {
-    $.get('csv/Options.csv', function(options) {
-      $.get('csv/Chapters.csv', function(chapters) {
-        initMap(
-          $.csv.toObjects(options),
-          $.csv.toObjects(chapters),
-        )
-      }).fail(function(e) { alert('Could not read Chapters.csv') });
-    }).fail(function(e) { alert('Could not read Options.csv') })
-  }
+
+    } else {
+      alert('You need to specify a valid Google Sheet (googleDocURL)')
+    }
+  
+  })
+
 
 
   /**
@@ -82,8 +101,17 @@ $(window).on('load', function() {
     var chapterContainerMargin = 70;
 
     document.title = getSetting('_mapTitle');
-    $('#title').append('<h3>' + getSetting('_mapTitle') + '</h3>');
-    $('#title').append('<small>' + getSetting('_mapSubtitle') + '</small>');
+    $('#header').append('<h1>' + getSetting('_mapTitle') + '</h1>');
+    $('#header').append('<h2>' + getSetting('_mapSubtitle') + '</h2>');
+
+    // Add logo
+    if (getSetting('_mapLogo')) {
+      $('#logo').append('<img src="' + getSetting('_mapLogo') + '" />');
+      $('#top').css('height', '60px');
+    } else {
+      $('#logo').css('display', 'none');
+      $('#header').css('padding-top', '25px');
+    }
 
     // Load tiles
     addBaseMap();
@@ -96,9 +124,18 @@ $(window).on('load', function() {
     }
 
     var markers = [];
-    changeMarkerColor = function(n, from, to) {
-      if (markers[n]) {
-        markers[n]._icon.className = markers[n]._icon.className.replace(from, to);
+
+    var markActiveColor = function(k) {
+      /* Removes marker-active class from all markers */
+      for (var i = 0; i < markers.length; i++) {
+        if (markers[i] && markers[i]._icon) {
+          markers[i]._icon.className = markers[i]._icon.className.replace(' marker-active', '');
+
+          if (i == k) {
+            /* Adds marker-active class, which is orange, to marker k */
+            markers[k]._icon.className += ' marker-active';
+          }
+        }
       }
     }
 
@@ -123,7 +160,7 @@ $(window).on('load', function() {
             icon: L.ExtraMarkers.icon({
               icon: 'fa-number',
               number: c['Marker'] === 'Plain' ? '' : chapterCount,
-              markerColor: 'blue'
+              markerColor: c['Marker Color'] || 'blue'
             }),
             opacity: c['Marker'] === 'Hidden' ? 0 : 0.9,
             interactive: c['Marker'] === 'Hidden' ? false : true,
@@ -146,12 +183,20 @@ $(window).on('load', function() {
       var mediaContainer = null;
 
       // Add media source
-      var source = $('<a>', {
-        text: c['Media Credit'],
-        href: c['Media Credit Link'],
-        target: "_blank",
-        class: 'source'
-      });
+      var source = '';
+      if (c['Media Credit Link']) {
+        source = $('<a>', {
+          text: c['Media Credit'],
+          href: c['Media Credit Link'],
+          target: "_blank",
+          class: 'source'
+        });
+      } else {
+        source = $('<span>', {
+          text: c['Media Credit'],
+          class: 'source'
+        });
+      }
 
       // YouTube
       if (c['Media Link'] && c['Media Link'].indexOf('youtube.com/') > -1) {
@@ -179,7 +224,7 @@ $(window).on('load', function() {
         'wav': 'audio',
       }
 
-      var mediaExt = c['Media Link'].split('.').pop();
+      var mediaExt = c['Media Link'].split('.').pop().toLowerCase();
       var mediaType = mediaTypes[mediaExt];
 
       if (mediaType) {
@@ -241,12 +286,7 @@ $(window).on('load', function() {
           $('div#container' + i).addClass("in-focus").removeClass("out-focus");
 
           currentlyInFocus = i;
-
-          for (var k = 0; k < pixelsAbove.length - 1; k++) {
-            changeMarkerColor(k, 'orange', 'blue');
-          }
-
-          changeMarkerColor(i, 'blue', 'orange');
+          markActiveColor(currentlyInFocus);
 
           // Remove overlay tile layer if needed
           if (map.hasLayer(overlay)) {
@@ -382,6 +422,22 @@ $(window).on('load', function() {
 
     $('div#container0').addClass("in-focus");
     $('div#contents').animate({scrollTop: '1px'});
+
+
+    // Add Google Analytics if the ID exists
+    var ga = getSetting('_googleAnalytics');
+    if ( ga && ga.length >= 10 ) {
+      var gaScript = document.createElement('script');
+      gaScript.setAttribute('src','https://www.googletagmanager.com/gtag/js?id=' + ga);
+      document.head.appendChild(gaScript);
+  
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', ga);
+    }
+
+
   }
 
 
